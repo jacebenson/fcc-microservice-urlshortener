@@ -1,11 +1,22 @@
 var http = require('http');
 const PORT = process.env.PORT || 5000;
+const mongoURI = process.env.mongoURI;
 function handleRequest(request, response) {
+  var input = request.url.toString().split('/')[1];
+  if(input == 'new'){
+    //create new entry
+    //first look for existing entry
+    //if not found insert it, return object with ...
+    //{ "original_url":"http://foo.com:80", "short_url":"https://myurl.com/8170" }
+    //if found, return object with ...
+    //{ "original_url":"http://foo.com:80", "short_url":"https://myurl.com/8170" }
+  } else {
+    //lookup entry
+    //if found, redirect to original_url
+    //if not found, error
+  }
   var returnObj = {
-    //headers: JSON.stringify(request.headers,'','  '),
-    language: request.headers['accept-language'].split(',')[0],
-    os: request.headers['user-agent'].split('(')[1].split(')')[0],
-    ip: request.headers['x-forwarded-for']
+    requested_input: input
   };
   response.setHeader('Content-Type', 'application/json');
   response.end(JSON.stringify(returnObj, '', '  '));
