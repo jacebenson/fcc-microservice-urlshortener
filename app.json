@@ -1,0 +1,8 @@
+{
+  "name": "FCC Microservice Header Parser",
+  "description": "Microserver to return ip, language and operating system",
+  "repository": "https://gitlab.com/jacebenson/fcc-microservice-headerparser",
+  "logo": "http://node-js-sample.herokuapp.com/node.svg",
+  "keywords": ["node"],
+  "image": "heroku/nodejs"
+}
