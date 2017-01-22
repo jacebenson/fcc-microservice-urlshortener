@@ -1,7 +1,8 @@
 var returnObj = {};
 var http = require('http');
 var validUrl = require('valid-url');
-mongoURI = require('./.env').uri;//has exports.uri = 'mongodb://..:..@url'
+//mongoURI = require('./.env').uri;//has exports.uri = 'mongodb://..:..@url'
+mongoURI = process.env.MONGOLAB_URI;
 mongodb = require('mongodb');
 MongoClient = mongodb.MongoClient;
 var port = process.env.PORT || 5000;
