@@ -42,7 +42,7 @@ var url = {
         var itemFound = null;
         var item = stream.on("data", function (item) {
           console.log('streaming on "data"\n' + JSON.stringify(item, '', '  '));
-          this.item = item;
+          url.item = item;
         });
         stream.on("end", function () {
           console.log('streaming on "end"');
@@ -94,7 +94,8 @@ function handleRequest(request, response) {
     //{ "original_url":"http://foo.com:80", "short_url":"https://myurl.com/8170" }
     returnObj = url.findByURL(requestedUrl);
   } else {
-    returnObj = url.findByID(id);
+    console.log('looking for id: ' + input)
+    //returnObj = url.findByID(id);
     //lookup entry
     //if found, redirect to original_url
     //if not found, error
@@ -105,7 +106,7 @@ function handleRequest(request, response) {
     };
     */
   response.setHeader('Content-Type', 'application/json');
-  response.end(JSON.stringify(returnObj, '', '  '));
+  response.end(JSON.stringify(returnObj, '', '    '));
 }
 
 var server = http.createServer(handleRequest);
