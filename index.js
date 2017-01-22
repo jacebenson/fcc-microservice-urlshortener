@@ -1,115 +1,89 @@
+var returnObj = {};
 var http = require('http');
-var mongodb = require('mongodb');
-var MongoClient = mongodb.MongoClient;
-const PORT = process.env.PORT || 5000;
-const mongoURI = process.env.MONGOLAB_URI;
-
-var url = {
-  findByID: function (id) {
-    MongoClient.connect(mongoURI, function (err, db) {
-      if (!err) {
-        console.log("We are connected");
-        console.log('looking for ' + JSON.stringify(url));
-        var collection = db.collection('shorts');
-        var stream = collection.find({ id: id }).stream();
-        var itemFound = stream.on("data", function (item) {
-          console.log('streaming on "data"\n' + JSON.stringify(item, '', '  '));
-          return item;
+var validUrl = require('valid-url');
+mongoURI = require('./.env').uri;//has exports.uri = 'mongodb://..:..@url'
+mongodb = require('mongodb');
+MongoClient = mongodb.MongoClient;
+var port = process.env.PORT || 5000;
+function insert(requestedUrl, response) {
+  MongoClient.connect(mongoURI, function (err, db) {
+    if (err) throw err;
+    console.log('Inserting url: ' + requestedUrl);
+    var id = db.collection('shorts').count({}, function (error, numOfDocs) {
+      if (err) throw err;
+      if (numOfDocs === null) {
+        numOfDocs = 0;
+      }
+      item = { original_url: requestedUrl, id: numOfDocs };
+      db.collection('shorts').insert(item);
+      response.end(JSON.stringify(item, '', '   '));
+      db.close();
+    });
+  });
+}
+function findByID(input, response) {
+  MongoClient.connect(mongoURI, function (err, db) {
+    if (err) throw err;
+    db.collection('shorts').findOne({ id: parseInt(input, 10) }, function (err, item) {
+      //db.collection('shorts').findOne({ id: '"' + input + '"' }, function (err, item) {
+      if (item) {
+        //response.end(JSON.stringify(item, '', '   '));
+        response.writeHead(302, {
+          'Location': item.original_url
         });
-        stream.on("end", function () {
-
-          console.log('streaming on "end"');
-          if (itemFound) {
-            console.log('itemFound');
-          } else {
-            console.log('itemFound not truthy');
-          }
-        });
+        response.end();
       } else {
-        console.error('FindRecord Error: ' + err);
+        response.end(JSON.stringify({ error: 'Could not find record.' }, '', '   '));
       }
     });
-  },
-  findByURL: function (requestedUrl) {
-    // Connect to the db
-    var obj = {};
+    db.close();
+  });
+}
+
+function findByURL(requestedUrl, response) {
+  //verify url is valid;
+  if (validUrl.isWebUri(requestedUrl)) {
+    var resultFound = { id: false };
     MongoClient.connect(mongoURI, function (err, db) {
-      if (!err) {
-        console.log("We are connected");
-        console.log('looking for ' + JSON.stringify(requestedUrl));
-        var collection = db.collection('shorts');
-        var stream = collection.find({ original_url: requestedUrl }).stream();
-        var itemFound = null;
-        var item = stream.on("data", function (item) {
-          console.log('streaming on "data"\n' + JSON.stringify(item, '', '  '));
-          url.item = item;
-        });
-        stream.on("end", function () {
-          console.log('streaming on "end"');
-        });
-        if(url.item){
-          return url.item;
+      if (err) throw err;
+      db.collection('shorts').findOne({ original_url: requestedUrl }, function (err, item) {
+        console.log(typeof item);
+        console.log(JSON.stringify(item));
+        if (item) {
+          response.end(JSON.stringify(item, '', '   '));
         } else {
-          return url.insert(requestedUrl);
+          insert(requestedUrl, response);
         }
-      } else {
-        console.error('FindRecord Error: ' + err);
-      }
+      });
+      db.close();
     });
-  },
-  insert: function (requestedUrl) {
-    // Connect to the db
-    MongoClient.connect(mongoURI, function (err, db) {
-      if (!err) {
-        console.log('Inserting url: ' + requestedUrl);
-        var id = db.collection('shorts').count({}, function (error, numOfDocs) {
-          if (error) {
-            console.error(error);
-          }
-          if (numOfDocs === null) {
-            numOfDocs = 0;
-          }
-          console.log('numOfDocs: ' + numOfDocs);
-          db.collection('shorts').insert({ original_url: requestedUrl, id: numOfDocs });
-          return { original_url: requestedUrl, id: numOfDocs };
-          //return numOfDocs;
-        });
-      } else {
-        console.error('Error on insert: ' + err);
-      }
-    });
+  } else {
+    response.end(JSON.stringify({error: "Not valid URL."}, '', '   '));
   }
-};
+}
 function handleRequest(request, response) {
-  var returnObj = {};
+  response.setHeader('Content-Type', 'application/json');
   var input = request.url.toString().split('/')[1];
-  console.log('input: ' + input);
+  var requestedUrl = request.url.toString().replace(/^.+new\//, '');
+  returnObj._input = input;
+  returnObj._requesetdUrl = requestedUrl;
   if (input === 'new') {
-    var requestedUrl = request.url.toString().replace(/^.+new\//, '');
     //create new entry
     //first look for existing entry
     //if not found insert it, return object with ...
-    //{ "original_url":"http://foo.com:80", "short_url":"https://myurl.com/8170" }
     //if found, return object with ...
-    //{ "original_url":"http://foo.com:80", "short_url":"https://myurl.com/8170" }
-    returnObj = url.findByURL(requestedUrl);
+    console.log('looking for url ' + requestedUrl);
+    findByURL(requestedUrl, response);
   } else {
-    console.log('looking for id: ' + input)
-    //returnObj = url.findByID(id);
     //lookup entry
     //if found, redirect to original_url
     //if not found, error
+    console.log('looking for record# ' + input);
+    findByID(input, response);
   }
-  /*  var returnObj = {
-      requested_input: input,
-      url: url
-    };
-    */
-  response.setHeader('Content-Type', 'application/json');
-  response.end(JSON.stringify(returnObj, '', '    '));
 }
 
 var server = http.createServer(handleRequest);
-server.listen(PORT, function () {
-  console.log("Server listening on: http://localhost:%s", PORT);
+server.listen(port, function () {
+  console.log("Server listening on: http://localhost:%s", port);
 });

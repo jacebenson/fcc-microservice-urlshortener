@@ -10,7 +10,8 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "mongodb": "2.2.21"
+    "mongodb": "2.2.21",
+    "valid-url": "1.0.9"
   },
   "repository": {
     "type": "git",
