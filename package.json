@@ -10,8 +10,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "ejs": "2.4.1",
-    "express": "4.13.3"
+    "mongodb": "2.2.21"
   },
   "repository": {
     "type": "git",
@@ -20,7 +19,7 @@
   "keywords": [
     "node",
     "heroku",
-    "express"
+    "mongodb"
   ],
   "license": "MIT"
 }
