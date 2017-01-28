@@ -73,8 +73,8 @@ function findByID(input, response) {
     }
 }
 module.exports = function (app) {
-    var client_id = process.env.CLIENT_ID || require('./.env').client_id;
-    var mongoURI = process.env.MONGOLAB_URI || require('./.env').uri;
+    //var client_id = process.env.CLIENT_ID || require('./.env').client_id;
+    var mongoURI = process.env.MONGOLAB_URI;// || require('./.env').uri;
     var http = require('http');
     var mongodb = require('mongodb');
     var MongoClient = mongodb.MongoClient;
