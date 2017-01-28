@@ -1,4 +1,64 @@
 'use strict';
+var mongodb = require('mongodb');
+var MongoClient = mongodb.MongoClient;
+var mongoURI = process.env.MONGOLAB_URI || require('./.env').uri;
+function findByURL(requestedUrl, response) {
+    //verify url is valid;
+    var validUrl = require('valid-url');
+    if (validUrl.isWebUri(requestedUrl)) {
+        var resultFound = { id: false };
+        MongoClient.connect(mongoURI, function (err, db) {
+            if (err) throw err;
+            db.collection('shorts').findOne({ original_url: requestedUrl }, function (err, item) {
+                console.log(typeof item);
+                console.log(JSON.stringify(item));
+                if (item) {
+                    response.send(JSON.stringify(item, '', '   '));
+                } else {
+                    insert(requestedUrl, response);
+                }
+            });
+            db.close();
+        });
+    } else {
+        response.send(JSON.stringify({ error: "Not valid URL." }, '', '   '));
+    }
+}
+function insert(requestedUrl, response) {
+  MongoClient.connect(mongoURI, function (err, db) {
+    if (err) throw err;
+    console.log('Inserting url: ' + requestedUrl);
+    var id = db.collection('shorts').count({}, function (error, numOfDocs) {
+      if (err) throw err;
+      if (numOfDocs === null) {
+        numOfDocs = 0;
+      }
+      item = { original_url: requestedUrl, id: numOfDocs };
+      db.collection('shorts').insert(item);
+      response.end(JSON.stringify(item, '', '   '));
+      db.close();
+    });
+  });
+}
+function findByID(input, response) {
+  MongoClient.connect(mongoURI, function (err, db) {
+    if (err) throw err;
+    console.log('looking for ' + input);
+    db.collection('shorts').findOne({ id: parseInt(input, 10) }, function (err, item) {
+      //db.collection('shorts').findOne({ id: '"' + input + '"' }, function (err, item) {
+      if (item) {
+        //response.end(JSON.stringify(item, '', '   '));
+        response.writeHead(302, {
+          'Location': item.original_url
+        });
+        response.end();
+      } else {
+        response.end(JSON.stringify({ error: 'Could not find record.' }, '', '   '));
+      }
+    });
+    db.close();
+  });
+}
 module.exports = function (app) {
     var client_id = process.env.CLIENT_ID || require('./.env').client_id;
     var mongoURI = process.env.MONGOLAB_URI || require('./.env').uri;
@@ -51,59 +111,18 @@ module.exports = function (app) {
      *      Via: 1.1 vegur
      */
 
-    app.route('/new/:url')
+    app.route('/new/*')
         .get(function (req, res) {
+            //console.log(req.path);
+            res.set('Content-Type', 'application/json');
             var term = encodeURIComponent(req.query.term);
-            var offset = parseInt(req.query.offset, 10) || 0;
-            res.set('Content-Type', 'text/html');
-            res.send(content);
             //start mongodb insert call
-            var d = new Date();
-            var dateString = d.toDateString();
-            console.log(mongoURI);
-            MongoClient.connect(mongoURI, function (err, db) {
-                if (err) throw err;
-                var id = db.collection('imagesearches').count({}, function (error, numOfDocs) {
-                    if (err) throw err;
-                    //console.log('numOfDocs: ' + numOfDocs);
-                    if (numOfDocs !== null) {
-                        if (numOfDocs > 5) {
-                            //console.log('numOfDocs > 5 deleting one where, dateString: ' + dateString);
-                            db.collection('imagesearches').remove({ created: { $ne: dateString } });
-                        }
-                    }
-                    var item = {
-                        query: term,
-                        created: dateString
-                    };
-                    db.collection('imagesearches').insert(item);
-                    db.close();
-                });
-            });
-            //end mongodb call
+            var requestedUrl = req.path.replace(/^\/new\//, '');
+            findByURL(requestedUrl,res);
         });
-    app.route('/api/history')
+    app.route('/:num')
         .get(function (req, res) {
-            try {
-                console.log('getting recent queries');
-                MongoClient.connect(mongoURI, function (err, db) {
-                    if (err) throw err;
-                    var cursor = db.collection('imagesearches').find().toArray(function (err, docs) {
-                        if (docs.length === 0) {
-                            res.set('Content-Type', 'application/json');
-                            res.send(JSON.stringify({ message: 'No recent queries.' }, '', '    '));
-                        } else {
-                            res.set('Content-Type', 'application/json');
-                            res.send(JSON.stringify(docs, '', '    '));
-                        }
-                    });
-                });
-
-            } catch (error) {
-                error.source = 'historyCall';
-                console.error(error);
-                //res.set('Content-Type', 'application/json');
-                //res.send(JSON.stringify(error));
-            }
+            console.log(req.path);
+            findByID(req.path.replace(/\//,''),res);
         });
 };

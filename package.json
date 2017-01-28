@@ -10,8 +10,10 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "valid-url": "1.0.9",
     "mongodb": "2.2.21",
-    "valid-url": "1.0.9"
+    "express": "4.14.0",
+    "body-parser": "1.16.0"
   },
   "repository": {
     "type": "git",
