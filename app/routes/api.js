@@ -1,7 +1,7 @@
 'use strict';
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
-var mongoURI = process.env.MONGOLAB_URI || require('./.env').uri;
+var mongoURI = process.env.MONGOLAB_URI;// || require('./.env').uri;
 function findByURL(requestedUrl, response) {
     //verify url is valid;
     try {
