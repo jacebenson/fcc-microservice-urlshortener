@@ -1,9 +1,12 @@
 'use strict';
+var url = 'https://url-svc.herokuapp.com/';
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var mongoURI = process.env.MONGOLAB_URI;// || require('./.env').uri;
 function findByURL(requestedUrl, response) {
     //verify url is valid;
+    console.log('looking for ' + requestedUrl);
+    requestedUrl = decodeURIComponent(requestedUrl);
     try {
         var validUrl = require('valid-url');
         if (validUrl.isWebUri(requestedUrl)) {
@@ -11,9 +14,11 @@ function findByURL(requestedUrl, response) {
             MongoClient.connect(mongoURI, function (err, db) {
                 if (err) throw err;
                 db.collection('shorts').findOne({ original_url: requestedUrl }, function (err, item) {
+                    if (err) throw err;
                     console.log(typeof item);
                     console.log(JSON.stringify(item));
                     if (item) {
+                        item.short_url = url + item.id;
                         response.send(JSON.stringify(item, '', '   '));
                     } else {
                         insert(requestedUrl, response);
@@ -38,8 +43,9 @@ function insert(requestedUrl, response) {
                 if (numOfDocs === null) {
                     numOfDocs = 0;
                 }
-                item = { original_url: requestedUrl, id: numOfDocs };
+                var item = { original_url: requestedUrl, id: numOfDocs };
                 db.collection('shorts').insert(item);
+                item.short_url = url + item.id;
                 response.end(JSON.stringify(item, '', '   '));
                 db.close();
             });
@@ -54,6 +60,9 @@ function findByID(input, response) {
             if (err) throw err;
             console.log('looking for ' + input);
             db.collection('shorts').findOne({ id: parseInt(input, 10) }, function (err, item) {
+                if(err){
+                    response.end(JSON.stringify({ error: err }, '', '   '));
+                }
                 //db.collection('shorts').findOne({ id: '"' + input + '"' }, function (err, item) {
                 if (item) {
                     //response.end(JSON.stringify(item, '', '   '));
@@ -85,7 +94,7 @@ module.exports = function (app) {
      * @apiGroup New
      * 
      * @apiExample {curl} Example usage:
-     * curl http://url-svc.herokuapp.com/new/https://google.com
+     * curl http://url-svc.glitch.me/new/https://google.com
      * 
      * @apiParam {String} url URL to add.
      *      
@@ -93,6 +102,7 @@ module.exports = function (app) {
      * @apiSuccess {String} shortURL._id mongoDB id
      * @apiSuccess {String} shortURL.original_url Original URL
      * @apiSuccess {String} shortURL.id ID used for short URL
+     * @apiSuccess {String} shortURL.short_url Short URL
      * 
      * @apiSuccessExample Success-response
      *      HTTP/1.1 200 OK
@@ -100,6 +110,7 @@ module.exports = function (app) {
      *          "_id": "588464016d933500047cb0f6",
      *          "original_url": "http://google.com",
      *          "id": 5
+     *          "short_url": "http://url-svc.glitch.me/5"
      *      }
      */
 
@@ -111,7 +122,7 @@ module.exports = function (app) {
      * 
      *  
      * @apiExample {curl} Example usage:
-     * curl http://url-svc.herokuapp.com/5
+     * curl http://url-svc.glitch.me/5
      * 
      * @apiSuccessExample Success-response
      *      HTTP/1.1 200 OK
@@ -126,16 +137,17 @@ module.exports = function (app) {
 
     app.route('/new/*')
         .get(function (req, res) {
-            //console.log(req.path);
+            console.log(req.path);
             res.set('Content-Type', 'application/json');
             var term = encodeURIComponent(req.query.term);
             //start mongodb insert call
-            var requestedUrl = req.path.replace(/^\/new\//, '');
+            var requestedUrl = req.originalUrl.replace(/^\/new\//, '');
+            console.log('in route requestedUrl: ' + requestedUrl);
             findByURL(requestedUrl, res);
         });
     app.route('/:num')
         .get(function (req, res) {
-            console.log(req.path);
-            findByID(req.path.replace(/\//, ''), res);
+            console.log(req.originalUrl);
+            findByID(req.originalUrl.replace(/\//, ''), res);
         });
 };
